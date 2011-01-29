@@ -3,17 +3,23 @@ module Beefcake
   class Buffer
 
     MinUint32 =  0
-    MaxUint32 =  (1<<32)-1
-    MinInt32  = -(1<<31)
-    MaxInt32  =  (1<<31)-1
+    MaxUint32 =  (1 << 32)-1
+    MinInt32  = -(1 << 31)
+    MaxInt32  =  (1 << 31)-1
 
     MinUint64 =  0
-    MaxUint64 =  (1<<64)-1
-    MinInt64  = -(1<<63)
-    MaxInt64  =  (1<<63)-1
+    MaxUint64 =  (1 << 64)-1
+    MinInt64  = -(1 << 63)
+    MaxInt64  =  (1 << 63)-1
 
     def self.wire_for(type)
       case type
+      when Class
+        if encodable?(type)
+          2
+        else
+          raise UnknownType, type
+        end
       when :int32, :uint32, :sint32, :int64, :uint64, :sint64, :bool, Module
         0
       when :fixed64, :sfixed64, :double
@@ -23,11 +29,7 @@ module Beefcake
       when :fixed32, :sfixed32, :float
         5
       else
-        if encodable?(type)
-          2
-        else
-          raise UnknownType, type
-        end
+        raise UnknownType, type
       end
     end
 
@@ -80,6 +82,8 @@ module Beefcake
 
     def read(n)
       case n
+      when Class
+        n.decode(read_string)
       when Symbol
         __send__("read_#{n}")
       when Module
