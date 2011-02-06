@@ -290,8 +290,9 @@ class MessageTest < Test::Unit::TestCase
   end
 
   def test_decode_repeated_nested
-    msg = RepeatedNestedMessage.new(:simple => [SimpleMessage.new(:a => 1),
-                                                SimpleMessage.new(:b => "hello")]).encode
+    msg = RepeatedNestedMessage.new(:simple =>
+                                    [SimpleMessage.new(:a => 1),
+                                     SimpleMessage.new(:b => "hello")]).encode
     got = RepeatedNestedMessage.decode(msg)
     assert_equal 2, got.simple.size
     assert_equal 1, got.simple[0].a
