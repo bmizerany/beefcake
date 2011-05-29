@@ -70,6 +70,10 @@ module Beefcake
       def buf=(buf)
         @buf = buf.force_encoding('BINARY')
       end
+
+      def buf
+        @buf.force_encoding('BINARY')
+      end
     end
 
     def length
