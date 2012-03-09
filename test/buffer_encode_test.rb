@@ -217,6 +217,10 @@ class BufferEncodeTest < Test::Unit::TestCase
   def test_append_bytes
     @buf.append_bytes("testing")
     assert_equal "\007testing", @buf.to_s
+
+    @buf.buf = ""
+    @buf.append_bytes(380253)
+    assert_equal "\006380253", @buf.to_s
   end
 
 end
