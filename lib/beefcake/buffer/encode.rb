@@ -106,7 +106,11 @@ module Beefcake
 
     def append_string(s)
       append_uint64(s.length)
-      self << s
+      if s.respond_to?(:force_encoding)
+        self << s.force_encoding("BINARY")
+      else
+        self << s
+      end
     end
     alias :append_bytes :append_string
 
