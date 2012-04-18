@@ -95,6 +95,70 @@ class LargeFieldNumberMessage
   required :field_2, :string, 100
 end
 
+class FieldTest < Test::Unit::TestCase
+  FIELD = Beefcake::Message::Field
+
+  def test_required?
+    f = FIELD.new :required, :field1, :string, 1
+    assert_true  f.required?
+    assert_false f.optional?
+    assert_false f.repeated?
+
+    f = FIELD.new :optional, :field1, :int32, 1
+    assert_false f.required?
+
+    f = FIELD.new :repeated, :field1, :int32, 1
+    assert_false f.required?
+  end
+
+  def test_optional?
+    f = FIELD.new :optional, :field1, :string, 1
+    assert_true  f.optional?
+    assert_false f.required?
+    assert_false f.repeated?
+
+    f = FIELD.new :required, :field1, :int32, 1
+    assert_false f.optional?
+
+    f = FIELD.new :repeated, :field1, :int32, 1
+    assert_false f.optional?
+  end
+
+  def test_repeated?
+    f = FIELD.new :repeated, :field1, :string, 1
+    assert_true  f.repeated?
+    assert_false f.required?
+    assert_false f.optional?
+
+    f = FIELD.new :optional, :field1, :int32, 1
+    assert_false f.repeated?
+
+    f = FIELD.new :required, :field1, :int32, 1
+    assert_false f.optional?
+  end
+
+  def test_same_type
+    f = FIELD.new(:required, :field1, :int32, 1)
+    assert_true  f.same_type?(:int32)
+    assert_false f.same_type?(:int64)
+    assert_false f.same_type?(SimpleMessage)
+
+    f = FIELD.new(:required, :field1, SimpleMessage, 1)
+    assert_true  f.same_type?(SimpleMessage)
+    assert_false f.same_type?(:int32)
+    assert_false f.same_type?(:string)
+    assert_false f.same_type?(NumericsMessage)
+  end
+
+  def test_is_protobuf?
+    f = FIELD.new(:required, :field1, SimpleMessage, 1)
+    assert_true f.is_protobuf?
+
+    f = FIELD.new(:required, :field1, :string, 1)
+    assert_false f.is_protobuf?
+  end
+end
+
 class MessageTest < Test::Unit::TestCase
   B = Beefcake::Buffer
 
@@ -156,6 +220,12 @@ class MessageTest < Test::Unit::TestCase
     )
 
     assert_equal buf2.to_s, msg.encode.to_s
+
+    msg = CompositeMessage.new(
+        :encodable => {:a => 123}
+    )
+    assert_equal buf2.to_s, msg.encode.to_s
+
   end
 
   def test_encode_to_string
@@ -170,6 +240,9 @@ class MessageTest < Test::Unit::TestCase
     buf.append(:int32, 2, 1)
 
     msg = EnumsMessage.new :a => EnumsMessage::X::A
+    assert_equal "\b\001", msg.encode.to_s
+
+    msg = EnumsMessage.new :a => 1
     assert_equal "\b\001", msg.encode.to_s
   end
 
@@ -331,6 +404,16 @@ class MessageTest < Test::Unit::TestCase
     assert_equal 2, got.simple.size
     assert_equal 1, got.simple[0].a
     assert_equal "hello", got.simple[1].b
+
+    simple_pure = [
+      {:a => 1},
+      {:b => "hello"}
+    ]
+    msg = RepeatedNestedMessage.new(:simple => simple_pure).encode
+    got = RepeatedNestedMessage.decode(msg)
+    assert_equal 2, got.simple.size
+    assert_equal 1, got.simple[0].a
+    assert_equal "hello", got.simple[1].b
   end
 
   def test_equality
@@ -372,7 +455,23 @@ class MessageTest < Test::Unit::TestCase
   def test_to_hash
     msg =  SimpleMessage.new :a => 1
     exp = { :a => 1 }
-    assert_equal(exp, msg.to_hash)
+    assert_equal exp, msg.to_hash
+
+    msg = RepeatedNestedMessage.new(
+      :simple => [
+        SimpleMessage.new(:a => 1),
+        SimpleMessage.new(:b => 'abc dfg'),
+        SimpleMessage.new(:a => 2, :b => 'ijk lmn')
+      ]
+    )
+    exp = {
+      :simple =>[
+        {:a => 1},
+        {:b => 'abc dfg'},
+        {:a => 2, :b => 'ijk lmn'}
+      ]
+    }
+    assert_equal exp, msg.to_hash
   end
 
 end
