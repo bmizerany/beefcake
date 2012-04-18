@@ -63,7 +63,11 @@ module Beefcake
     end
 
     def initialize(buf="")
-      self.buf = buf
+      if buf.respond_to?(:force_encoding)
+        self.buf = buf.force_encoding("BINARY")
+      else
+        self.buf = buf
+      end
     end
 
     if ''.respond_to?(:force_encoding)
