@@ -109,7 +109,8 @@ class CodeGeneratorRequest
     optional :name, :string, 1       # file name, relative to root of source tree
     optional :package, :string, 2    # e.g. "foo", "foo.bar", etc.
 
-    repeated :message_type, DescriptorProto, 4;
+    repeated :message_type, DescriptorProto,     4;
+    repeated :enum_type,    EnumDescriptorProto, 5;
   end
 
 
@@ -159,14 +160,6 @@ module Beefcake
     def initialize(c)
       @c = c
       @n = 0
-    end
-
-    def file!(file)
-      puts "## Generated from #{file.name} for #{file.package}"
-
-      file.message_type.each do |mt|
-        message!("", mt)
-      end
     end
 
     def indent(&blk)
@@ -269,7 +262,12 @@ module Beefcake
       puts
 
       ns!(ns) do
-        file.message_type.each do |mt|
+        Array(file.enum_type).each do |et|
+          enum!(et)
+        end
+        puts
+
+        Array(file.message_type).each do |mt|
           message!(file.package, mt)
         end
       end
