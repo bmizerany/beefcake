@@ -109,7 +109,8 @@ class CodeGeneratorRequest
     optional :name, :string, 1       # file name, relative to root of source tree
     optional :package, :string, 2    # e.g. "foo", "foo.bar", etc.
 
-    repeated :message_type, DescriptorProto, 4;
+    repeated :message_type, DescriptorProto, 4
+    repeated :enum_type,    EnumDescriptorProto, 5
   end
 
 
@@ -269,8 +270,12 @@ module Beefcake
       puts
 
       ns!(ns) do
-        file.message_type.each do |mt|
+        Array(file.message_type).each do |mt|
           message!(file.package, mt)
+        end
+
+        Array(file.enum_type).each do |et|
+          enum!(et)
         end
       end
     end
