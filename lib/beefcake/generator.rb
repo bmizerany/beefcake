@@ -262,12 +262,13 @@ module Beefcake
       puts
 
       ns!(ns) do
-        Array(file.message_type).each do |mt|
-          message!(file.package, mt)
-        end
-
         Array(file.enum_type).each do |et|
           enum!(et)
+        end
+        puts
+
+        Array(file.message_type).each do |mt|
+          message!(file.package, mt)
         end
       end
     end
