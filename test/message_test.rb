@@ -257,7 +257,7 @@ class MessageTest < Test::Unit::TestCase
 
     got = NumericsMessage.decode(msg.encode)
 
-    msg.fields.values.each do |fld|
+    msg._fields.values.each do |fld|
       assert_equal msg[fld.name], got[fld.name], fld.name
     end
   end
@@ -306,7 +306,7 @@ class MessageTest < Test::Unit::TestCase
 
   def test_decode_default
     got = EnumsDefaultMessage.decode("")
-    assert_equal EnumsDefaultMessage.fields[1].opts[:default], got.a
+    assert_equal EnumsDefaultMessage._fields[1].opts[:default], got.a
   end
 
   def test_decode_unset_required_fields

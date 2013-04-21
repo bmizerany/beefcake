@@ -91,17 +91,37 @@ class CodeGeneratorRequest
     # optional :options, EnumOptions, 3
   end
 
+  class MethodDescriptorProto
+    include Beefcake::Message
+
+    optional :name, :string, 1
+
+    # NOTE: We keep these so we can document the expected behavior.
+    optional :input_type, :string, 2
+    optional :output_type, :string, 3
+    #optional :method_options, MethodOptions, 4
+  end
+
+  class ServiceDescriptorProto
+    include Beefcake::Message
+
+    optional :name, :string, 1
+
+    repeated :method, MethodDescriptorProto, 2
+    #optional :options, ServiceOptions, 3
+  end
+
   class DescriptorProto
     include Beefcake::Message
 
     optional :name, :string, 1
 
-    repeated :field,       FieldDescriptorProto, 2
-    repeated :extended,    FieldDescriptorProto, 6
-    repeated :nested_type, DescriptorProto,      3
-    repeated :enum_type,   EnumDescriptorProto,  4
+    repeated :field,        FieldDescriptorProto,   2
+    repeated :extended,     FieldDescriptorProto,   6
+    repeated :nested_type,  DescriptorProto,        3
+    repeated :enum_type,    EnumDescriptorProto,    4
+    repeated :service_type, ServiceDescriptorProto, 6
   end
-
 
   class FileDescriptorProto
     include Beefcake::Message
@@ -109,7 +129,9 @@ class CodeGeneratorRequest
     optional :name, :string, 1       # file name, relative to root of source tree
     optional :package, :string, 2    # e.g. "foo", "foo.bar", etc.
 
-    repeated :message_type, DescriptorProto, 4;
+    repeated :message_type, DescriptorProto,     4
+    repeated :enum_type,    EnumDescriptorProto, 5
+    repeated :service_type, ServiceDescriptorProto, 6
   end
 
 
@@ -167,6 +189,10 @@ module Beefcake
       file.message_type.each do |mt|
         message!("", mt)
       end
+
+      file.service_type.each do |mt|
+        service!("", mt)
+      end
     end
 
     def indent(&blk)
@@ -179,9 +205,38 @@ module Beefcake
       @n = n
     end
 
+    def method!(pkg, st, mt)
+      puts "def #{underscore(mt.name)}(request)"
+
+      indent do
+        if mt.output_type
+          output_klass = mt.output_type.split('.').last
+          puts %(send_request("#{st.name}.#{mt.name}", request, :returns => #{output_klass}))
+        else
+          puts %(send_request("#{st.name}.#{mt.name}", request))
+        end
+      end
+
+      puts "end"
+    end
+
+    def service!(pkg, st)
+      puts
+      puts "class #{camelize(st.name).gsub(/service$/i, '')}Client < Beefcake::Client"
+
+      indent do
+        # Now define methods for each, too.
+        Array(st.method).each do |mt|
+          method!(pkg, st, mt)
+        end
+      end
+
+      puts "end"
+    end
+
     def message!(pkg, mt)
       puts
-      puts "class #{mt.name}"
+      puts "class #{camelize(mt.name)}"
 
       indent do
         puts "include Beefcake::Message"
@@ -208,7 +263,7 @@ module Beefcake
     end
 
     def enum!(et)
-      puts "module #{et.name}"
+      puts "module #{camelize(et.name)}"
       indent do
         et.value.each do |v|
           puts "%s = %d" % [v.name, v.number]
@@ -269,8 +324,16 @@ module Beefcake
       puts
 
       ns!(ns) do
-        file.message_type.each do |mt|
+        Array(file.enum_type).each do |et|
+          enum!(et)
+        end
+
+        Array(file.message_type).each do |mt|
           message!(file.package, mt)
+        end
+
+        Array(file.service_type).each do |mt|
+          service!("", mt)
         end
       end
     end
@@ -295,5 +358,31 @@ module Beefcake
       end
     end
 
+    # NOTE: This is hopelessly ripped off from ActiveSupport.
+    #
+    # @param [String] camel_cased_word the word to underscoreize
+    # @return the underscored word.
+    #
+    def underscore(camel_cased_word)
+      word = camel_cased_word.to_s.dup
+      word.gsub!(/::/, '/')
+      #word.gsub!(/(?:([A-Za-z\d])|^)(#{inflections.acronym_regex})(?=\b|[^a-z])/) { "#{$1}#{$1 && '_'}#{$2.downcase}" }
+      word.gsub!(/([A-Z\d]+)([A-Z][a-z])/,'\1_\2')
+      word.gsub!(/([a-z\d])([A-Z])/,'\1_\2')
+      word.tr!("-", "_")
+      word.downcase!
+      word
+    end
+
+    # Bastardized version of ActiveSupport's inflector
+    #
+    # @param [String] term the string to camelize.
+    # @return [String] the camelized word.
+    #
+    def camelize(term)
+      string = term.to_s
+      string = string.sub(/^[a-z\d]*/) { $&.capitalize }
+      string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub('/', '::')
+    end
   end
 end

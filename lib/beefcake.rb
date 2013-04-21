@@ -1,4 +1,6 @@
+require 'socket'
 require 'beefcake/buffer'
+require 'beefcake/client_backends'
 
 module Beefcake
   module Message
@@ -45,12 +47,12 @@ module Beefcake
       end
 
       def field(rule, name, type, fn, opts)
-        fields[fn] = Field.new(rule, name, type, fn, opts)
+        _fields[fn] = Field.new(rule, name, type, fn, opts)
         attr_accessor name
       end
 
-      def fields
-        @fields ||= {}
+      def _fields
+        @_fields ||= {}
       end
     end
 
@@ -69,7 +71,7 @@ module Beefcake
 
         # TODO: Error if any required fields at nil
 
-        fields.values.sort.each do |fld|
+        _fields.values.sort.each do |fld|
           if fld.opts[:packed]
             bytes = encode!(Buffer.new, fld, 0)
             buf.append_info(fld.fn, Buffer.wire_for(fld.type))
@@ -120,7 +122,7 @@ module Beefcake
       end
 
       def validate!
-        fields.values.each do |fld|
+        _fields.values.each do |fld|
           if fld.rule == :required && self[fld.name].nil?
             raise RequiredFieldNotSetError, fld.name
           end
@@ -140,7 +142,7 @@ module Beefcake
         while buf.length > 0
           fn, wire = buf.read_info
 
-          fld = fields[fn]
+          fld = _fields[fn]
 
           # We don't have a field for with index fn.
           # Ignore this data and move on.
@@ -171,7 +173,7 @@ module Beefcake
         end
 
         # Set defaults
-        fields.values.each do |f|
+        _fields.values.each do |f|
           next if o[f.name] == false
           o[f.name] ||= f.opts[:default]
         end
@@ -190,13 +192,13 @@ module Beefcake
     end
 
     def initialize(attrs={})
-      fields.values.each do |fld|
+      _fields.values.each do |fld|
         self[fld.name] = attrs[fld.name]
       end
     end
 
-    def fields
-      self.class.fields
+    def _fields
+      self.class._fields
     end
 
     def [](k)
@@ -209,11 +211,11 @@ module Beefcake
 
     def ==(o)
       return false if (o == nil) || (o == false)
-      fields.values.all? {|fld| self[fld.name] == o[fld.name] }
+      _fields.values.all? {|fld| self[fld.name] == o[fld.name] }
     end
 
     def inspect
-      set = fields.values.select {|fld| self[fld.name] != nil }
+      set = _fields.values.select {|fld| self[fld.name] != nil }
 
       flds = set.map do |fld|
         val = self[fld.name]
@@ -233,7 +235,7 @@ module Beefcake
     end
 
     def to_hash
-      fields.values.inject({}) do |h, fld|
+      _fields.values.inject({}) do |h, fld|
         if v = self[fld.name]
           h[fld.name] = v
         end
@@ -243,4 +245,33 @@ module Beefcake
 
   end
 
+  class Client
+    attr_reader :host, :port
+
+    def self.set_backend(backend)
+      @backend = backend
+    end
+
+    def self.backend(host, port)
+      @backend ? @backend.new(host, port) : default_backend(host, port)
+    end
+
+    def self.default_backend(host, port)
+      Beefcake::ClientBackends::DefaultBackend.new(host, port)
+    end
+
+    def initialize(host, port)
+      @host, @port = [host.to_s, port.to_i]
+    end
+
+    protected
+
+    def send_request(service_method, obj, opts={})
+      backend.send_request(service_method, obj, opts)
+    end
+
+    def backend
+      @backend ||= Beefcake::Client.backend(host, port)
+    end
+  end
 end
