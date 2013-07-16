@@ -1,3 +1,4 @@
+require 'helper'
 require 'beefcake'
 
 class NumericsMessage

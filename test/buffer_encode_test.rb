@@ -1,3 +1,6 @@
+# encoding: ASCII-8BIT
+
+require 'helper'
 require 'beefcake/buffer/encode'
 
 class BufferEncodeTest < Test::Unit::TestCase
