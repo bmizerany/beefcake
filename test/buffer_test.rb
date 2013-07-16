@@ -1,3 +1,4 @@
+require 'helper'
 require 'beefcake/buffer'
 
 class BufferTest < Test::Unit::TestCase
