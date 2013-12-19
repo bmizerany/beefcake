@@ -114,7 +114,12 @@ module Beefcake
       append_uint64(encoded.length)
       self << encoded
     end
-    alias :append_bytes :append_string
+
+    def append_bytes(b)
+      b = b.to_s
+      append_uint64(b.length)
+      self << b
+    end
 
 
     private
