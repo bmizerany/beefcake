@@ -217,6 +217,7 @@ module Beefcake
     end
 
     def initialize(attrs={})
+      attrs ||= {}
       fields.values.each do |fld|
         self[fld.name] = attrs[fld.name]
       end
