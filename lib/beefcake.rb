@@ -272,7 +272,15 @@ module Beefcake
       __beefcake_fields__.values.inject({}) do |h, fld|
         value = self[fld.name]
         unless value.nil?
-          h[fld.name] = value
+          case value
+          when Array
+            next if value.empty?
+            h[fld.name] = value.map {|val| val.is_a?(Message) ? val.to_hash : val}
+          when Message
+            h[fld.name] = value.to_hash
+          else
+            h[fld.name] = value
+          end
         end
         h
       end
