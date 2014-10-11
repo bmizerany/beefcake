@@ -433,6 +433,12 @@ class MessageTest < Minitest::Test
     assert_equal false_expectation, false_message.to_hash
   end
 
+  def test_nested_to_hash
+    msg = CompositeMessage.new(:encodable => SimpleMessage.new(:a => 1))
+    exp = { :encodable => { :a => 1 } }
+    assert_equal(exp, msg.to_hash)
+  end
+
   def test_fields_named_fields
     contents = %w{fields named fields}
     msg = FieldsMessage.new fields: contents

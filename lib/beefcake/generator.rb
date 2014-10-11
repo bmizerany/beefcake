@@ -109,8 +109,10 @@ class CodeGeneratorRequest
     optional :name, :string, 1       # file name, relative to root of source tree
     optional :package, :string, 2    # e.g. "foo", "foo.bar", etc.
 
-    repeated :message_type, DescriptorProto,     4;
-    repeated :enum_type,    EnumDescriptorProto, 5;
+    repeated :dependency, :string, 3
+
+    repeated :message_type, DescriptorProto,     4
+    repeated :enum_type,    EnumDescriptorProto, 5
   end
 
 
@@ -146,8 +148,9 @@ module Beefcake
         g.compile(ns, file)
 
         g.c.rewind
+        # Change the filename to be relative to -I
         CodeGeneratorResponse::File.new(
-          :name => File.basename(file.name, ".proto") + ".pb.rb",
+          :name => file.name.gsub(".proto", ".pb.rb"),
           :content => g.c.read
         )
       end
@@ -239,7 +242,7 @@ module Beefcake
         end
         t = t.gsub(/^\.*/, "")       # Remove leading `.`s
 
-        t.gsub(".", "::")  # Convert to Ruby namespacing syntax
+        t.split(".").map { |e| e[0].capitalize + e[1..-1]  }.join("::") # Convert to Ruby namespacing syntax
       else
         ":#{name_for(f, T, f.type)}"
       end
@@ -273,7 +276,13 @@ module Beefcake
       puts "require \"beefcake\""
       puts
 
+      # Use the package as a namespace, converting under_scores to CamelCase for better Ruby style
+      ns += (file.package || "").split(/\W+/).map{ |e| e.split('_').map(&:capitalize).join('') }
       ns!(ns) do
+        Array(file.dependency).each do |df|
+          puts "require \"#{df.gsub(".proto", ".pb")}\""
+        end
+
         Array(file.enum_type).each do |et|
           enum!(et)
         end
