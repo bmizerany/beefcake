@@ -33,6 +33,13 @@ class GeneratorTest < Minitest::Test
     assert_match(/module Top\s*\n\s*module Bottom/m, @res.file.first.content)
   end
 
+  def test_generate_package_namespace
+    @req.proto_file.first.package = "middle.bottom_level"
+    @res = Beefcake::Generator.compile(["Top"], @req)
+    assert_match(/module Top\s*\n\s*module Middle\s*\n\s*module BottomLevel/m, @res.file.first.content)
+  end
+
+
   # Covers the regression of encoding a CodeGeneratorResponse under 1.9.2-p136 raising
   # Encoding::CompatibilityError: incompatible character encodings: ASCII-8BIT and US-ASCII
   def test_encode_decode_generated_response

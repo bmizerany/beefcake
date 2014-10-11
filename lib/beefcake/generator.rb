@@ -239,7 +239,7 @@ module Beefcake
         end
         t = t.gsub(/^\.*/, "")       # Remove leading `.`s
 
-        t.gsub(".", "::")  # Convert to Ruby namespacing syntax
+        t.split(".").map { |e| e[0].capitalize + e[1..-1]  }.join("::") # Convert to Ruby namespacing syntax
       else
         ":#{name_for(f, T, f.type)}"
       end
@@ -273,6 +273,8 @@ module Beefcake
       puts "require \"beefcake\""
       puts
 
+      # Use the package as a namespace, converting under_scores to CamelCase for better Ruby style
+      ns += (file.package || "").split(/\W+/).map{ |e| e.split('_').map(&:capitalize).join('') }
       ns!(ns) do
         Array(file.enum_type).each do |et|
           enum!(et)
