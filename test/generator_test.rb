@@ -49,6 +49,12 @@ class GeneratorTest < Minitest::Test
     assert_match(/require "addressbook.pb"/m, @res.file.first.content)    
   end
 
+  def test_generate_retain_path
+    @req.proto_file.first.name = "proto/addressbook.proto"
+    @res = Beefcake::Generator.compile([], @req)
+    assert_equal("proto/addressbook.pb.rb", @res.file.first.name)
+  end
+
   # Covers the regression of encoding a CodeGeneratorResponse under 1.9.2-p136 raising
   # Encoding::CompatibilityError: incompatible character encodings: ASCII-8BIT and US-ASCII
   def test_encode_decode_generated_response

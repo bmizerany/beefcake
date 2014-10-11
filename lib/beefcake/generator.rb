@@ -148,8 +148,9 @@ module Beefcake
         g.compile(ns, file)
 
         g.c.rewind
+        # Change the filename to be relative to -I
         CodeGeneratorResponse::File.new(
-          :name => File.basename(file.name, ".proto") + ".pb.rb",
+          :name => file.name.gsub(".proto", ".pb.rb"),
           :content => g.c.read
         )
       end
