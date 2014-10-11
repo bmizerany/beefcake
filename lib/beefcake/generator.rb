@@ -109,8 +109,10 @@ class CodeGeneratorRequest
     optional :name, :string, 1       # file name, relative to root of source tree
     optional :package, :string, 2    # e.g. "foo", "foo.bar", etc.
 
-    repeated :message_type, DescriptorProto,     4;
-    repeated :enum_type,    EnumDescriptorProto, 5;
+    repeated :dependency, :string, 3
+
+    repeated :message_type, DescriptorProto,     4
+    repeated :enum_type,    EnumDescriptorProto, 5
   end
 
 
@@ -276,6 +278,10 @@ module Beefcake
       # Use the package as a namespace, converting under_scores to CamelCase for better Ruby style
       ns += (file.package || "").split(/\W+/).map{ |e| e.split('_').map(&:capitalize).join('') }
       ns!(ns) do
+        Array(file.dependency).each do |df|
+          puts "require \"#{df.gsub(".proto", ".pb")}\""
+        end
+
         Array(file.enum_type).each do |et|
           enum!(et)
         end

@@ -39,6 +39,15 @@ class GeneratorTest < Minitest::Test
     assert_match(/module Top\s*\n\s*module Middle\s*\n\s*module BottomLevel/m, @res.file.first.content)
   end
 
+  def test_generate_import
+    # Load up the generator request for the addressbook.proto example
+    dat = File.dirname(__FILE__) + "/../dat/code_generator_request_import.dat"
+    mock_request = File.read(dat)
+    @req = CodeGeneratorRequest.decode(mock_request)
+    @res = Beefcake::Generator.compile([], @req)
+    assert_equal(CodeGeneratorResponse, @res.class)
+    assert_match(/require "addressbook.pb"/m, @res.file.first.content)    
+  end
 
   # Covers the regression of encoding a CodeGeneratorResponse under 1.9.2-p136 raising
   # Encoding::CompatibilityError: incompatible character encodings: ASCII-8BIT and US-ASCII
