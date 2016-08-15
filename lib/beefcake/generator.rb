@@ -139,7 +139,6 @@ module Beefcake
     L = CodeGeneratorRequest::FieldDescriptorProto::Label
     T = CodeGeneratorRequest::FieldDescriptorProto::Type
 
-
     def self.compile(ns, req)
       file = req.proto_file.map do |file|
         g = new(StringIO.new)
@@ -192,19 +191,19 @@ module Beefcake
       puts "end"
     end
 
-    def message!(pkg, mt)
+    def message!(pkg, mt, ns)
       puts
       puts "class #{mt.name}"
 
       indent do
         ## Generate Types
         Array(mt.nested_type).each do |nt|
-          message!(pkg, nt)
+          message!(pkg, nt, ns)
         end
 
         ## Generate Fields
         Array(mt.field).each do |f|
-          field!(pkg, f)
+          field!(pkg, f, ns)
         end
       end
 
@@ -222,7 +221,7 @@ module Beefcake
       puts "end"
     end
 
-    def field!(pkg, f)
+    def field!(pkg, f, ns)
       # Turn the label into Ruby
       label = name_for(f, L, f.label)
 
@@ -234,19 +233,13 @@ module Beefcake
         # We have a type_name so we will use it after converting to a
         # Ruby friendly version
         t = f.type_name
-        if pkg
-          t = t.gsub(pkg, "") # Remove the leading package name
-        end
-        t = t.gsub(/^\.*/, "")       # Remove leading `.`s
-
-        t.gsub(".", "::")  # Convert to Ruby namespacing syntax
+        namespaced_type(t, pkg, ns)
       else
         ":#{name_for(f, T, f.type)}"
       end
 
       # Finally, generate the declaration
       out = "%s %s, %s, %d" % [label, name, type, f.number]
-
       if f.default_value
         v = case f.type
         when T::TYPE_ENUM
@@ -261,6 +254,30 @@ module Beefcake
       end
 
       puts out
+    end
+
+    # Generates a correctly namespaced ruby class name
+    # Removes pkg from type_pcs or from namespace
+    # Removes from type_pcs when infered type is same as pkg
+    # Removes from namespace when decendent is same as pkg
+    #
+    # @param type [String] A field type name
+    # @param pkg [String] The package name from the protobuf
+    # @param ns [String] The user provided namespace
+    #
+    # @return [String] A correctly namespaced ruby class name
+    def namespaced_type(type, pkg, ns)
+      type_key = type.gsub(/^:/, '').to_sym
+      return type if Buffer::WIRES.keys.include?(type_key)
+
+      type_pcs = type.split('.').reject!(&:empty?)
+      namespace = ns.clone
+      if type_pcs.first == pkg
+        type_pcs.shift
+      elsif namespace.last.casecmp(pkg)
+        namespace.pop
+      end
+      namespace.concat(type_pcs).join('::')
     end
 
     # Determines the name for a
@@ -284,7 +301,7 @@ module Beefcake
         end
 
         file.message_type.each do |mt|
-          message!(file.package, mt)
+          message!(file.package, mt, ns)
         end
       end
     end
