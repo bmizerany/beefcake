@@ -142,8 +142,10 @@ module Beefcake
 
     def self.compile(ns, req)
       file = req.proto_file.map do |file|
+        package_ns = ns + (file.package || "").split(/\W+/).map(&:capitalize)
+
         g = new(StringIO.new)
-        g.compile(ns, file)
+        g.compile(package_ns, file)
 
         g.c.rewind
         CodeGeneratorResponse::File.new(
